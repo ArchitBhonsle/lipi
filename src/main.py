@@ -17,7 +17,7 @@ buf = lipi.shape(text)
 glyphs = Glyph.parseGlyphs(buf.glyph_infos, buf.glyph_positions)
 
 for glyph in glyphs:
-    print(glyph.info.gid)
+    print(glyph)
     print(lipi.getGlyphSVG(glyph.info.gid) + "\n")
 
 print(lipi.getHbBufferSVG(buf))

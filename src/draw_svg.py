@@ -43,7 +43,8 @@ class DrawSVG:
 
     def getGlyphSVG(self, hbFont, gid) -> str:
         pathD = self._getGlyphPathD(hbFont, gid)
-        print(pathD)
+        if not pathD:  # exiting early for empty glyphs
+            return ""
         xMin, xMax, yMin, yMax = spt.parse_path(pathD).bbox()
         pathString = f'<path d="{pathD}" />'
         svg = [
@@ -88,9 +89,10 @@ class DrawSVG:
             path = f'<path d="{pathD}" transform="translate({xCursor + glyph.position.xOffset}, {yCursor + glyph.position.yOffset})"/>'
             paths.append(path)
 
-            xMin, xMax, yMin, yMax = spt.parse_path(pathD).bbox()
-            rect = f'<rect x="{xCursor + xMin}" y="{yCursor + yMin}" width="{xMax - xMin}" height="{yMax - yMin}" fill="none" stroke="red" stroke-width="20" stroke-dasharray="50,50" />'
-            rects.append(rect)
+            if pathD:  # do not make a rectangle for empty glyphs
+                xMin, xMax, yMin, yMax = spt.parse_path(pathD).bbox()
+                rect = f'<rect x="{xCursor + xMin}" y="{yCursor + yMin}" width="{xMax - xMin}" height="{yMax - yMin}" fill="none" stroke="red" stroke-width="20" stroke-dasharray="50,50" />'
+                rects.append(rect)
 
             xCursor += glyph.position.xAdvance
             yCursor += glyph.position.yAdvance
