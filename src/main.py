@@ -3,16 +3,16 @@ from glyph import Glyph
 
 POPPINS = "C:/Users/abhon/Downloads/Fonts/Poppins/Poppins-Regular.ttf"
 NOTO_SANS = "C:/Users/abhon/Downloads/Fonts/Noto_Sans/NotoSans-Regular.ttf"
-fontpath = POPPINS
+fontpath = NOTO_SANS
 
 DEVANAGRI = "देवनागरी"
 ARCHIT = "अर्चित"
 ANNUCHED = "अनुच्छेद"
 COMPLEX = "र्क्स्ल्पि"
 
-text = ANNUCHED
+text = ARCHIT
 
-lipi = Lipi(POPPINS)
+lipi = Lipi(fontpath)
 buf = lipi.shape(text)
 glyphs = Glyph.parseGlyphs(buf.glyph_infos, buf.glyph_positions)
 
@@ -20,4 +20,4 @@ for glyph in glyphs:
     print(glyph.info.gid)
     print(lipi.getGlyphSVG(glyph.info.gid) + "\n")
 
-print(lipi.getBufferSVG(buf))
+print(lipi.getHbBufferSVG(buf))

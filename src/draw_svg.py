@@ -1,4 +1,8 @@
+from typing import List, Tuple
 import uharfbuzz as hb
+import svgpathtools as spt
+
+from glyph import Glyph
 
 
 class DrawSVG:
@@ -31,8 +35,70 @@ class DrawSVG:
         self.drawFuncs.set_quadratic_to_func(DrawSVG.quadraticTo, self.drawPaths)
         self.drawFuncs.set_close_path_func(DrawSVG.closePath, self.drawPaths)
 
-    def _getGlyphPathString(self, hbFont, gid) -> str:
+    def _getGlyphPathD(self, hbFont, gid) -> str:
         self.drawFuncs.get_glyph_shape(hbFont, gid)
         paths = self.drawPaths.copy()
         self.drawPaths.clear()
         return "".join(paths)
+
+    def getGlyphSVG(self, hbFont, gid) -> str:
+        pathD = self._getGlyphPathD(hbFont, gid)
+        print(pathD)
+        xMin, xMax, yMin, yMax = spt.parse_path(pathD).bbox()
+        pathString = f'<path d="{pathD}" />'
+        svg = [
+            f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{xMin} {yMin} {xMax} {yMax}" transform="matrix(1 0 0 -1 0 0)">',
+            pathString,
+            "</svg>",
+        ]
+
+        return "\n".join(svg)
+
+    def getGlyphsSVG(
+        self, hbFont, glyphs: List[Glyph], fontVerticalExtents: Tuple[int, int, int]
+    ) -> str:
+        _, descender, fullheight = fontVerticalExtents
+        xCursor, yCursor = 0, -descender
+
+        paths = []
+        for glyph in glyphs:
+            pathString = self._getGlyphPathD(hbFont, glyph.info.gid)
+            path = f'<path d="{pathString}" transform="translate({xCursor + glyph.position.xOffset}, {yCursor + glyph.position.yOffset})"/>'
+            paths.append(path)
+
+            xCursor += glyph.position.xAdvance
+            yCursor += glyph.position.yAdvance
+
+        svg = [
+            f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {xCursor} {fullheight}" transform="matrix(1 0 0 -1 0 0)">',
+            *paths,
+            "</svg>",
+        ]
+        return "\n".join(svg)
+
+    def _getGlyphsSVGWithBBs(
+        self, hbFont, glyphs: List[Glyph], fontVerticalExtents: Tuple[int, int, int]
+    ) -> str:
+        _, descender, fullheight = fontVerticalExtents
+        xCursor, yCursor = 0, -descender
+
+        paths, rects = [], []
+        for glyph in glyphs:
+            pathD = self._getGlyphPathD(hbFont, glyph.info.gid)
+            path = f'<path d="{pathD}" transform="translate({xCursor + glyph.position.xOffset}, {yCursor + glyph.position.yOffset})"/>'
+            paths.append(path)
+
+            xMin, xMax, yMin, yMax = spt.parse_path(pathD).bbox()
+            rect = f'<rect x="{xCursor + xMin}" y="{yCursor + yMin}" width="{xMax - xMin}" height="{yMax - yMin}" fill="none" stroke="red" stroke-width="20" stroke-dasharray="50,50" />'
+            rects.append(rect)
+
+            xCursor += glyph.position.xAdvance
+            yCursor += glyph.position.yAdvance
+
+        svg = [
+            f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {xCursor} {fullheight}" transform="matrix(1 0 0 -1 0 0)">',
+            *paths,
+            *rects,
+            "</svg>",
+        ]
+        return "\n".join(svg)

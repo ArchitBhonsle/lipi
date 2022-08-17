@@ -36,6 +36,10 @@ class Glyph:
     def parseGlyphs(infos: List, positions: List) -> List[Glyph]:
         return [Glyph(info, pos) for info, pos in zip(infos, positions)]
 
+    @staticmethod
+    def parseHbBuffer(buf) -> List[Glyph]:
+        return Glyph.parseGlyphs(buf.glyph_infos, buf.glyph_positions)
+
     def __init__(self, info, pos) -> None:
         self.info = GlyphInfo(info)
         self.position = GlyphPosition(pos)

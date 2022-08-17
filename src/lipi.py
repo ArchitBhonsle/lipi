@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import Tuple
+
 import uharfbuzz as hb
 from fontTools.ttLib import TTFont
 
@@ -41,8 +42,9 @@ class Lipi:
         return buf
 
     def _getGlyphPathString(self, gid) -> str:
-        return self.drawSVG._getGlyphPathString(self.hbFont, gid)
+        return self.drawSVG._getGlyphPathD(self.hbFont, gid)
 
+    # TODO this might be unecessary if I use svgfonttools to get the extents
     def getFontVerticalExtents(self) -> Tuple[int, int, int]:
         if "hhea" in self.ttFont:
             ascender = self.ttFont["hhea"].ascender
@@ -59,38 +61,19 @@ class Lipi:
 
         return ascender, descender, fullheight
 
-    # TODO need path extents for this to work properly
     def getGlyphSVG(self, gid) -> str:
-        _, descender, fullheight = self.getFontVerticalExtents()
-        xCursor, yCursor = 0, -descender
+        return self.drawSVG.getGlyphSVG(self.hbFont, gid)
 
-        pathString = self._getGlyphPathString(gid)
-        path = f'<path d="{pathString}" transform="translate({xCursor}, {yCursor})"/>'
+    def getHbBufferSVG(self, buf) -> str:
+        # nice for debugging
+        # return self.drawSVG._getGlyphsSVGWithBBs(
+        #     self.hbFont,
+        #     Glyph.parseHbBuffer(buf),
+        #     self.getFontVerticalExtents(),
+        # )
 
-        svg = [
-            f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {fullheight} {fullheight}" transform="matrix(1 0 0 -1 0 0)">',
-            path,
-            "</svg>",
-        ]
-
-        return "\n".join(svg)
-
-    def getBufferSVG(self, buf) -> str:
-        _, descender, fullheight = self.getFontVerticalExtents()
-        xCursor, yCursor = 0, -descender
-
-        paths = []
-        for glyph in Glyph.parseGlyphs(buf.glyph_infos, buf.glyph_positions):
-            pathString = self._getGlyphPathString(glyph.info.gid)
-            path = f'<path d="{pathString}" transform="translate({xCursor + glyph.position.xOffset}, {yCursor + glyph.position.yOffset})"/>'
-            paths.append(path)
-
-            xCursor += glyph.position.xAdvance
-            yCursor += glyph.position.yAdvance
-
-        svg = [
-            f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {xCursor} {fullheight}" transform="matrix(1 0 0 -1 0 0)">',
-            *paths,
-            "</svg>",
-        ]
-        return "\n".join(svg)
+        return self.drawSVG.getGlyphsSVG(
+            self.hbFont,
+            Glyph.parseHbBuffer(buf),
+            self.getFontVerticalExtents(),
+        )

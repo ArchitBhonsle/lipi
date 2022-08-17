@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 uharfbuzz = "*"
 fonttools = "*"
+svgpathtools = "*"
 
 [dev-packages]
 black = "*"
