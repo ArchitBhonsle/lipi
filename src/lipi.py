@@ -66,11 +66,11 @@ class Lipi:
 
     def getHbBufferSVG(self, buf) -> str:
         # nice for debugging
-        # return self.drawSVG._getGlyphsSVGWithBBs(
-        #     self.hbFont,
-        #     Glyph.parseHbBuffer(buf),
-        #     self.getFontVerticalExtents(),
-        # )
+        return self.drawSVG._getGlyphsSVGWithBBs(
+            self.hbFont,
+            Glyph.parseHbBuffer(buf),
+            self.getFontVerticalExtents(),
+        )
 
         return self.drawSVG.getGlyphsSVG(
             self.hbFont,

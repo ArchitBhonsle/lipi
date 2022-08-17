@@ -84,6 +84,7 @@ class DrawSVG:
         xCursor, yCursor = 0, -descender
 
         paths, rects = [], []
+        colours, coloursIndex = ["red", "green", "blue"], 0
         for glyph in glyphs:
             pathD = self._getGlyphPathD(hbFont, glyph.info.gid)
             path = f'<path d="{pathD}" transform="translate({xCursor + glyph.position.xOffset}, {yCursor + glyph.position.yOffset})"/>'
@@ -91,8 +92,9 @@ class DrawSVG:
 
             if pathD:  # do not make a rectangle for empty glyphs
                 xMin, xMax, yMin, yMax = spt.parse_path(pathD).bbox()
-                rect = f'<rect x="{xCursor + xMin}" y="{yCursor + yMin}" width="{xMax - xMin}" height="{yMax - yMin}" fill="none" stroke="red" stroke-width="20" stroke-dasharray="50,50" />'
+                rect = f'<rect x="{xCursor + xMin}" y="{yCursor + yMin}" width="{xMax - xMin}" height="{yMax - yMin}" fill="none" stroke="{colours[coloursIndex]}" stroke-width="15" stroke-dasharray="25,25" />'
                 rects.append(rect)
+                coloursIndex = (coloursIndex + 1) % 3
 
             xCursor += glyph.position.xAdvance
             yCursor += glyph.position.yAdvance
