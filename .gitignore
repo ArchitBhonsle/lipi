@@ -1,5 +1,6 @@
 /in/
 /out/
+/explore/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

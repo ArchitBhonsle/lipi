@@ -2,7 +2,7 @@ from typing import List, Tuple
 import uharfbuzz as hb
 import svgpathtools as spt
 
-from glyph import Glyph
+from .glyph import Glyph
 
 
 class DrawSVG:
@@ -77,7 +77,7 @@ class DrawSVG:
         ]
         return "\n".join(svg)
 
-    def _getGlyphsSVGWithBBs(
+    def _getGlyphsSVGDebug(
         self, hbFont, glyphs: List[Glyph], fontVerticalExtents: Tuple[int, int, int]
     ) -> str:
         _, descender, fullheight = fontVerticalExtents
@@ -87,12 +87,12 @@ class DrawSVG:
         colours, coloursIndex = ["red", "green", "blue"], 0
         for glyph in glyphs:
             pathD = self._getGlyphPathD(hbFont, glyph.info.gid)
-            path = f'<path d="{pathD}" transform="translate({xCursor + glyph.position.xOffset}, {yCursor + glyph.position.yOffset})"/>'
+            path = f'<path d="{pathD}" transform="translate({xCursor + glyph.position.xOffset}, {yCursor + glyph.position.yOffset})" fill="{colours[coloursIndex]}"/>'
             paths.append(path)
 
             if pathD:  # do not make a rectangle for empty glyphs
                 xMin, xMax, yMin, yMax = spt.parse_path(pathD).bbox()
-                rect = f'<rect x="{xCursor + xMin}" y="{yCursor + yMin}" width="{xMax - xMin}" height="{yMax - yMin}" fill="none" stroke="{colours[coloursIndex]}" stroke-width="15" stroke-dasharray="25,25" />'
+                rect = f'<rect x="{xCursor + xMin}" y="{yCursor + yMin}" width="{xMax - xMin}" height="{yMax - yMin}" fill="none" stroke="{colours[coloursIndex]}" stroke-width="5" />'
                 rects.append(rect)
                 coloursIndex = (coloursIndex + 1) % 3
 

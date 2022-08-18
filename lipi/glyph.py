@@ -1,5 +1,4 @@
 from __future__ import annotations
-from turtle import position
 from typing import List
 
 
@@ -34,6 +33,8 @@ class GlyphPosition:
 class Glyph:
     @staticmethod
     def parseGlyphs(infos: List, positions: List) -> List[Glyph]:
+        if positions is None:
+            return [Glyph(info, None) for info in infos]
         return [Glyph(info, pos) for info, pos in zip(infos, positions)]
 
     @staticmethod
@@ -42,7 +43,9 @@ class Glyph:
 
     def __init__(self, info, pos) -> None:
         self.info = GlyphInfo(info)
-        self.position = GlyphPosition(pos)
+        self.position = GlyphPosition(pos) if pos is not None else None
 
     def __str__(self) -> str:
-        return str(self.info) + " | " + str(self.position)
+        return str(self.info) + (
+            " | " + str(self.position) if self.position is not None else ""
+        )

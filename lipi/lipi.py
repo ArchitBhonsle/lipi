@@ -4,8 +4,10 @@ from typing import Tuple
 import uharfbuzz as hb
 from fontTools.ttLib import TTFont
 
-from draw_svg import DrawSVG
-from glyph import Glyph
+from lipi.history_muncher import HistoryMuncher
+
+from .draw_svg import DrawSVG
+from .glyph import Glyph
 
 
 class Lipi:
@@ -27,19 +29,29 @@ class Lipi:
         # setup drawfunctions
         self.drawSVG = DrawSVG()
 
-    @staticmethod
-    def message_callback(message: str):
-        print(message)
+    def create_message_callback(self):
+        def message_callback(message: str):
+            self._muncher.munch(message, self._buffer)
+
+        return message_callback
 
     def shape(self, text: str):
-        buf = hb.Buffer()
-        buf.add_str(text)
-        buf.guess_segment_properties()
-        buf.set_message_func(Lipi.message_callback)
+        self._buffer = hb.Buffer()
+        self._buffer.add_str(text)
+        self._buffer.guess_segment_properties()
+        self._buffer.set_message_func(self.create_message_callback())
 
-        hb.shape(self.hbFont, buf)
+        self._muncher = HistoryMuncher()
 
-        return buf
+        hb.shape(self.hbFont, self._buffer)
+
+        print(self._muncher.gidToUnicode, self._muncher.substitutionsMap)
+
+        glyphs = Glyph.parseGlyphs(self._buf.glyph_infos, self._buf.glyph_positions)
+        self._buffer = None
+        self._muncher = None
+
+        return glyphs
 
     def _getGlyphPathString(self, gid) -> str:
         return self.drawSVG._getGlyphPathD(self.hbFont, gid)
@@ -66,7 +78,7 @@ class Lipi:
 
     def getHbBufferSVG(self, buf) -> str:
         # nice for debugging
-        return self.drawSVG._getGlyphsSVGWithBBs(
+        return self.drawSVG._getGlyphsSVGDebug(
             self.hbFont,
             Glyph.parseHbBuffer(buf),
             self.getFontVerticalExtents(),
