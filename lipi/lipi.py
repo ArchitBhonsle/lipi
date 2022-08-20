@@ -44,12 +44,9 @@ class Lipi:
         self._muncher = HistoryMuncher()
 
         hb.shape(self.hbFont, self._buffer)
-
-        print(self._muncher.gidToUnicode, self._muncher.substitutionsMap)
-
-        glyphs = Glyph.parseGlyphs(self._buf.glyph_infos, self._buf.glyph_positions)
-        self._buffer = None
-        self._muncher = None
+        glyphs = Glyph.parseGlyphs(
+            self._buffer.glyph_infos, self._buffer.glyph_positions
+        )
 
         return glyphs
 
