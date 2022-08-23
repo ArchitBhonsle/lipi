@@ -1,13 +1,39 @@
 from __future__ import annotations
-from typing import Tuple
+from asyncio import BoundedSemaphore
+from typing import Dict, List, Tuple
 
 import uharfbuzz as hb
 from fontTools.ttLib import TTFont
 
 from lipi.history_muncher import HistoryMuncher
+from lipi.draw_svg import BoundingBox, DrawSVG
+from lipi.glyph import Glyph
 
-from .draw_svg import DrawSVG
-from .glyph import Glyph
+
+class ShapingOutput:
+    def __init__(
+        self,
+        text: str,
+        glyphs: List[Glyph],
+        mapping: Dict[int, List[int]],
+        svg: str,
+        boundingBoxes: List[BoundingBox],
+    ) -> None:
+        self.text = text
+        self.mapping = mapping
+        self.glyphs = glyphs
+        self.svg = svg
+        self.boundingBoxes = boundingBoxes
+
+    def __str__(self) -> str:
+        return "\n".join(
+            [
+                f"{str(glyph)} | {str(boundingBox)} | {[self.text[i] for i in self.mapping[g]]}"
+                for g, (glyph, boundingBox) in enumerate(
+                    zip(self.glyphs, self.boundingBoxes)
+                )
+            ]
+        )
 
 
 class Lipi:
@@ -19,49 +45,74 @@ class Lipi:
         face = hb.Face(self.fontData)
         upem = face.upem  # number of units per m
 
-        self.hbFont = hb.Font(face)
-        self.hbFont.scale = (upem, upem)
+        self.__hbFont = hb.Font(face)
+        self.__hbFont.scale = (upem, upem)
 
-        # setup ttfont and glyphOrder
-        self.ttFont = TTFont(fontPath)
-        self.glyphOrder = self.ttFont.getGlyphOrder()
+        # setup ttfont
+        self.__ttFont = TTFont(fontPath)
 
         # setup drawfunctions
-        self.drawSVG = DrawSVG()
+        self.__drawSVG = DrawSVG()
 
-    def create_message_callback(self):
+    def __create_message_callback(self):
         def message_callback(message: str):
-            self._muncher.munch(message, self._buffer)
+            self.__muncher.munch(message, self.__buffer)
 
         return message_callback
 
-    def shape(self, text: str):
-        self._buffer = hb.Buffer()
-        self._buffer.add_str(text)
-        self._buffer.guess_segment_properties()
-        self._buffer.set_message_func(self.create_message_callback())
+    def shape(self, text: str) -> ShapingOutput:
+        self.__buffer = hb.Buffer()
+        self.__buffer.add_str(text)
+        self.__buffer.guess_segment_properties()
+        self.__buffer.set_message_func(self.__create_message_callback())
 
-        self._muncher = HistoryMuncher()
+        self.__muncher = HistoryMuncher()
+        hb.shape(self.__hbFont, self.__buffer)
 
-        hb.shape(self.hbFont, self._buffer)
-        glyphs = Glyph.parseGlyphs(
-            self._buffer.glyph_infos, self._buffer.glyph_positions
+        mapping = self.__muncher.mapping
+        glyphs = Glyph.parseHbBuffer(self.__buffer)
+        svg, boundingBoxes = self.__drawSVG.getGlyphsSVG(
+            self.__hbFont,
+            Glyph.parseHbBuffer(self.__buffer),
+            self.__getFontVerticalExtents(),
         )
 
-        return glyphs
+        self.__buffer = None
+        self.__muncher = None
 
-    def _getGlyphPathString(self, gid) -> str:
-        return self.drawSVG._getGlyphPathD(self.hbFont, gid)
+        return ShapingOutput(text, glyphs, mapping, svg, boundingBoxes)
+
+    def shapeDebug(self, text: str) -> ShapingOutput:
+        self.__buffer = hb.Buffer()
+        self.__buffer.add_str(text)
+        self.__buffer.guess_segment_properties()
+        self.__buffer.set_message_func(self.__create_message_callback())
+
+        self.__muncher = HistoryMuncher()
+        hb.shape(self.__hbFont, self.__buffer)
+
+        mapping = self.__muncher.mapping
+        glyphs = Glyph.parseHbBuffer(self.__buffer)
+        svg, boundingBoxes = self.__drawSVG.getGlyphsSVGDebug(
+            self.__hbFont,
+            Glyph.parseHbBuffer(self.__buffer),
+            self.__getFontVerticalExtents(),
+        )
+
+        self.__buffer = None
+        self.__muncher = None
+
+        return ShapingOutput(text, glyphs, mapping, svg, boundingBoxes)
 
     # TODO this might be unecessary if I use svgfonttools to get the extents
-    def getFontVerticalExtents(self) -> Tuple[int, int, int]:
-        if "hhea" in self.ttFont:
-            ascender = self.ttFont["hhea"].ascender
-            descender = self.ttFont["hhea"].descender
+    def __getFontVerticalExtents(self) -> Tuple[int, int, int]:
+        if "hhea" in self.__ttFont:
+            ascender = self.__ttFont["hhea"].ascender
+            descender = self.__ttFont["hhea"].descender
             fullheight = ascender - descender
-        elif "OS/2" in self.ttFont:
-            ascender = self.ttFont["OS/2"].sTypoAscender
-            descender = self.ttFont["OS/2"].sTypoDescender
+        elif "OS/2" in self.__ttFont:
+            ascender = self.__ttFont["OS/2"].sTypoAscender
+            descender = self.__ttFont["OS/2"].sTypoDescender
             fullheight = ascender - descender
         else:
             raise Exception(
@@ -69,20 +120,3 @@ class Lipi:
             )
 
         return ascender, descender, fullheight
-
-    def getGlyphSVG(self, gid) -> str:
-        return self.drawSVG.getGlyphSVG(self.hbFont, gid)
-
-    def getHbBufferSVG(self, buf) -> str:
-        # nice for debugging
-        return self.drawSVG._getGlyphsSVGDebug(
-            self.hbFont,
-            Glyph.parseHbBuffer(buf),
-            self.getFontVerticalExtents(),
-        )
-
-        return self.drawSVG.getGlyphsSVG(
-            self.hbFont,
-            Glyph.parseHbBuffer(buf),
-            self.getFontVerticalExtents(),
-        )

@@ -5,6 +5,17 @@ import svgpathtools as spt
 from .glyph import Glyph
 
 
+class BoundingBox:
+    def __init__(self, x: float, y: float, width: float, height: float) -> None:
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+
+    def __str__(self) -> str:
+        return f"x={self.x:>7.2f}, y={self.y:>7.2f}, width={self.width:>7.2f}, height={self.height:>7.2f}"
+
+
 class DrawSVG:
     @staticmethod
     def moveTo(x, y, buffer_list):
@@ -41,7 +52,7 @@ class DrawSVG:
         self.drawPaths.clear()
         return "".join(paths)
 
-    def getGlyphSVG(self, hbFont, gid) -> str:
+    def getGlyphSVG(self, hbFont, gid) -> Tuple[str, BoundingBox]:
         pathD = self._getGlyphPathD(hbFont, gid)
         if not pathD:  # exiting early for empty glyphs
             return ""
@@ -53,19 +64,27 @@ class DrawSVG:
             "</svg>",
         ]
 
-        return "\n".join(svg)
+        return ("\n".join(svg), BoundingBox(xMin, yMin, xMax - xMin, yMax - yMin))
 
     def getGlyphsSVG(
         self, hbFont, glyphs: List[Glyph], fontVerticalExtents: Tuple[int, int, int]
-    ) -> str:
+    ) -> Tuple[str, List[BoundingBox]]:
         _, descender, fullheight = fontVerticalExtents
         xCursor, yCursor = 0, -descender
 
         paths = []
+        boundingBoxes = []
         for glyph in glyphs:
             pathString = self._getGlyphPathD(hbFont, glyph.info.gid)
             path = f'<path d="{pathString}" transform="translate({xCursor + glyph.position.xOffset}, {yCursor + glyph.position.yOffset})"/>'
             paths.append(path)
+
+            xMin, xMax, yMin, yMax = (
+                spt.parse_path(pathString).bbox() if pathString else (0, 0, 0, 0)
+            )
+            boundingBoxes.append(
+                BoundingBox(xCursor + xMin, yCursor + yMin, xMax - xMin, yMax - yMin)
+            )
 
             xCursor += glyph.position.xAdvance
             yCursor += glyph.position.yAdvance
@@ -75,15 +94,15 @@ class DrawSVG:
             *paths,
             "</svg>",
         ]
-        return "\n".join(svg)
+        return ["\n".join(svg), boundingBoxes]
 
-    def _getGlyphsSVGDebug(
+    def getGlyphsSVGDebug(
         self, hbFont, glyphs: List[Glyph], fontVerticalExtents: Tuple[int, int, int]
-    ) -> str:
+    ) -> Tuple[str, List[BoundingBox]]:
         _, descender, fullheight = fontVerticalExtents
         xCursor, yCursor = 0, -descender
 
-        paths, rects = [], []
+        paths, rects, boundingBoxes = [], [], []
         colours, coloursIndex = ["red", "green", "blue"], 0
         for glyph in glyphs:
             pathD = self._getGlyphPathD(hbFont, glyph.info.gid)
@@ -92,9 +111,17 @@ class DrawSVG:
 
             if pathD:  # do not make a rectangle for empty glyphs
                 xMin, xMax, yMin, yMax = spt.parse_path(pathD).bbox()
-                rect = f'<rect x="{xCursor + xMin}" y="{yCursor + yMin}" width="{xMax - xMin}" height="{yMax - yMin}" fill="none" stroke="{colours[coloursIndex]}" stroke-width="5" />'
-                rects.append(rect)
-                coloursIndex = (coloursIndex + 1) % 3
+
+            xMin, xMax, yMin, yMax = (
+                spt.parse_path(pathD).bbox() if pathD else (0, 0, 0, 0)
+            )
+            boundingBoxes.append(
+                BoundingBox(xCursor + xMin, yCursor + yMin, xMax - xMin, yMax - yMin)
+            )
+
+            rect = f'<rect x="{xCursor + xMin}" y="{yCursor + yMin}" width="{xMax - xMin}" height="{yMax - yMin}" fill="none" stroke="{colours[coloursIndex]}" stroke-width="5" />'
+            rects.append(rect)
+            coloursIndex = (coloursIndex + 1) % 3
 
             xCursor += glyph.position.xAdvance
             yCursor += glyph.position.yAdvance
@@ -105,4 +132,5 @@ class DrawSVG:
             *rects,
             "</svg>",
         ]
-        return "\n".join(svg)
+
+        return ["\n".join(svg), boundingBoxes]

@@ -47,5 +47,5 @@ class Glyph:
 
     def __str__(self) -> str:
         return str(self.info) + (
-            " | " + str(self.position) if self.position is not None else ""
+            ", " + str(self.position) if self.position is not None else ""
         )

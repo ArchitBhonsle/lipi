@@ -11,7 +11,7 @@ class HistoryMuncher:
         match self._stage:
             case 0:  # first call
                 self.initialGlyphs = GlyphInfo.parseGlyphInfos(hbBuffer.glyph_infos)
-                self.mapping: Dict[List[int]] = {
+                self.mapping: Dict[int, List[int]] = {
                     i: [i] for i in range(len(self.initialGlyphs))
                 }
                 self._stage = 1

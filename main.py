@@ -17,9 +17,10 @@ KKKKKK = "क्क्क्क्क्क"
 text = SHRU
 texts = [DEVANAGRI, ARCHIT, ANNUCHED, COMPLEX, SHRU, REPHS, KKKKKK]
 
-for t in texts:
+for t in [ARCHIT]:
     lipi = Lipi(fontpath)
-    glyphs = lipi.shape(t)
-    print(list(t))
-    for i, g in enumerate(glyphs):
-        print(i, g.info.gid, [t[j] for j in lipi._muncher.mapping[i]])
+    out = lipi.shape(t)
+    print(out)
+    print()
+    debout = lipi.shapeDebug(t)
+    print(debout)
